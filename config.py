@@ -2,7 +2,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     DB_URL: str
-    SECRET_KEY: str
+    JWT_ACCESS_SECRET_KEY: str
+    JWT_REFRESH_SECRET_KEY: str
     ALGORITHM: str
 
     # Магия, которая читает файл .env

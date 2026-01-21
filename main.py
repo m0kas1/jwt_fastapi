@@ -1,34 +1,36 @@
 from fastapi import Depends, FastAPI
 from routers import authRouter
-# main.py
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from motor.motor_asyncio import AsyncIOMotorClient
 from beanie import init_beanie
 from config import settings
 from models.User import User
-from models.Role import Role
+from models.Refresh import Token
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    client = AsyncIOMotorClient(settings.DB_URL)
+    try:
+        client = AsyncIOMotorClient(settings.DB_URL)
 
-    # 2. Инициализируем Beanie
-    # database_name - имя вашей базы данных
-    await init_beanie(database=client.my_db_name, document_models=[User])
+        # 2. Инициализируем Beanie
+        # database_name - имя вашей базы данных
+        await init_beanie(database=client.my_db_name, document_models=[User, Token])
 
-    print("Startup: База данных подключена!")
-    yield
-    print("Shutdown: Отключение...")
+        print("Startup: База данных подключена!")
+        yield
+        print("Shutdown: Отключение...")
+    except:
+        print('Сервер закрыл свою работу')
 
 
 app = FastAPI(lifespan=lifespan)
 
 app.include_router(
     authRouter.router,
-    prefix="/auth",
-    tags=["auth"],
+    prefix="/api",
+    tags=["api"],
     responses={418: {"description": "I'm a teapot"}},
 )
 
