@@ -1,55 +1,55 @@
-from fastapi import Request, Response, HTTPException, status
-from models.User import User
-import bcrypt
-import jwt
-from datetime import datetime, timedelta, timezone
-from jwt.exceptions import InvalidTokenError
-from config import settings
-from validator import UserCreateRequest
+from fastapi import Request, Response
+from validator import ValidUserDates
 from service.tokenservice import TokenService
-from models.User import Roli_na_ruke
+from service.userservice import UserService
+
 newToken = TokenService()
+userService = UserService()
 
 class authController:
-    async def registration(self, user_data: UserCreateRequest):
-            candidate = await User.find_one(User.username == user_data.username)
-            if candidate:
-                raise 'Такой пользователь уже есть'
-            new_pass_hash = bcrypt.hashpw(user_data.password.encode('utf-8'), bcrypt.gensalt())
-            new_user = User(
-                username =  user_data.username,
-                password = new_pass_hash.decode('utf-8'),
-                roles = [Roli_na_ruke(name_role="USER")]
-            )
-            await new_user.insert()
-            rolki = [i.name_role for i in new_user.roles]
-            data_user = {"id": str(new_user.id), "roles": rolki}
-            token = newToken.generate_token(data_user)
-            await newToken.save_refresh_token(new_user.id, token["refresh_token"])
-            return {**token, "userId": data_user}
-        # except Exception as e:
+    async def registration(self, user_data: ValidUserDates, res: Response):
+        register = await userService.registration(user_data)
+        res.set_cookie(
+            key="refresh_token",
+            value=register["refresh_token"],
+            httponly=True,
+            samesite="lax",
+            secure=True,  # Ставь False, если тестируешь на localhost без https
+            max_age=30 * 24 * 60 * 60
+        )
+        return register
 
-        #     return str(e)
+    async def login(self, user_data: ValidUserDates, res: Response):
+        user_data_on_token = await userService.login(user_data)
+        res.set_cookie(
+            key="refresh_token",
+            value=user_data_on_token["refresh_token"],
+            httponly=True,
+            samesite="lax",
+            secure=True,  # Ставь False, если тестируешь на localhost без https
+            max_age=30 * 24 * 60 * 60
+        )
+        return {"message": "Успешная аутентификация"}
 
-    async def login(self, user_data: dict):
-            candidate = await User.find_one(User.username == user_data['username'])
-            if not candidate:
-                raise HTTPException(status_code=400, detail="Неверные данные")
-            valid = bcrypt.checkpw(user_data['password'].encode('utf-8'), candidate.password.encode('utf-8'))
-            if not valid:
-                raise HTTPException(status_code=400, detail="Неверные данные")
-
-            rolki = [i.name_role for i in candidate.roles]
-
-            token = newToken.generate_token({"id": str(candidate.id), "roles": rolki})
-            return token
+    async def logout(self, res: Response, req: Request):
+        read_refresh_cookie = req.cookies.get('refresh_token')
+        await userService.logout(read_refresh_cookie)
+        res.delete_cookie('refresh_token')
+        return {"message": "Успешный выход"}
 
     async def getAll(self):
-        users = await User.find().to_list()
-        return users
+        return userService.getAll()
 
-    async def logout(self):
-        return 1
-
-    async def refresh(self):
-        return 1
+    async def refresh(self, res: Response, req: Request):
+        read_refresh_cookie = req.cookies.get('refresh_token')
+        user_data_on_token = await userService.refresh(read_refresh_cookie)
+        res.delete_cookie('refresh_token')
+        res.set_cookie(
+            key="refresh_token",
+            value=user_data_on_token["refresh_token"],
+            httponly=True,
+            samesite="lax",
+            secure=True,  # Ставь False, если тестируешь на localhost без https
+            max_age=30 * 24 * 60 * 60
+        )
+        return {"message": "Успешное обновление токена"}

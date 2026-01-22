@@ -9,5 +9,5 @@ class Token(Document):
     class Settings:
         name = "refresh_token"
         indexes = [
-            IndexModel([("username", ASCENDING)], unique=True)
+            IndexModel([("refresh_token", ASCENDING)], unique=True)
         ]

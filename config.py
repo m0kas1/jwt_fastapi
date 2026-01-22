@@ -5,9 +5,9 @@ class Settings(BaseSettings):
     JWT_ACCESS_SECRET_KEY: str
     JWT_REFRESH_SECRET_KEY: str
     ALGORITHM: str
+    ACCESS_TOKEN_EXPIRE_MINUTES: int
+    REFRESH_TOKEN_EXPIRE_DAYS: int
 
-    # Магия, которая читает файл .env
     model_config = SettingsConfigDict(env_file=".env")
 
-# Создаем экземпляр, который будем импортировать везде
 settings = Settings()
