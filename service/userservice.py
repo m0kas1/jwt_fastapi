@@ -4,6 +4,7 @@ from validator import ValidUserDates
 from service.tokenservice import TokenService
 from models.User import Roli_na_ruke
 from exeptions.api_error import ApiError
+from separators.date_user import SeparatorPayload
 
 newToken = TokenService()
 
@@ -23,10 +24,8 @@ class UserService:
         await new_user.insert()
 
         roles_to_string = [role_obj.name_role for role_obj in new_user.roles]
-        data_user_to_dict = {"id": str(new_user.id), "roles": roles_to_string}
-        token = newToken.generate_token(data_user_to_dict)
-        await newToken.save_refresh_token(new_user.id, token["refresh_token"])
-        return {**token, "userId": data_user_to_dict}
+        data = await SeparatorPayload.get_payload(str(new_user.id), roles_to_string)
+        return data
 
     async def login(self, user_date: ValidUserDates):
         candidate = await User.find_one(User.username == user_date.username)
@@ -38,10 +37,8 @@ class UserService:
             raise ApiError.BadRequestError("Неверный пароль")
 
         roles_to_string = [role_obj.name_role for role_obj in candidate.roles]
-        data_user_to_dict = {"id": str(candidate.id), "roles": roles_to_string}
-        token = newToken.generate_token(data_user_to_dict)
-        await newToken.save_refresh_token(candidate.id, token["refresh_token"])
-        return {**token, "userId": data_user_to_dict}
+        data = await SeparatorPayload.get_payload(str(candidate.id), roles_to_string)
+        return data
 
     async def logout(self, refresh_token):
         token = await newToken.removeToken(refresh_token)
@@ -57,11 +54,8 @@ class UserService:
         if not userData or not tokenFromDB:
             raise ApiError.UnauthorizedError()
 
-        roles = [role for role in userData['roles']]
-        data_user_to_dict = {"id": str(userData['id']), "roles": roles}
-        token = newToken.generate_token(data_user_to_dict)
-        await newToken.save_refresh_token(userData['id'], token["refresh_token"])
-        return {**token, "userId": data_user_to_dict}
+        data = await SeparatorPayload.get_payload(str(userData['id']), userData['roles'])
+        return data
 
     async def getAll(self):
         users = await User.find().to_list()

@@ -38,7 +38,7 @@ class authController:
         return {"message": "Успешный выход"}
 
     async def getAll(self):
-        return userService.getAll()
+        return await userService.getAll()
 
     async def refresh(self, res: Response, req: Request):
         read_refresh_cookie = req.cookies.get('refresh_token')
@@ -52,4 +52,4 @@ class authController:
             secure=True,  # Ставь False, если тестируешь на localhost без https
             max_age=30 * 24 * 60 * 60
         )
-        return {"message": "Успешное обновление токена"}
+        return user_data_on_token
